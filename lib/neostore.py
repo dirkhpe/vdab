@@ -5,8 +5,7 @@ This class consolidates functions related to the neo4J datastore.
 import logging
 import sys
 from pandas import DataFrame
-from py2neo import Graph, Node, Relationship, NodeSelector
-from py2neo.database import DBMS
+from py2neo import Graph, Node, Relationship, NodeMatcher
 
 
 class NeoStore:
@@ -26,7 +25,7 @@ class NeoStore:
         self.graph = self._connect2db()
         if refresh == 'Yes':
             self._delete_all()
-        self.selector = NodeSelector(self.graph)
+        self.matcher = NodeMatcher(self.graph)
         return
 
     def _connect2db(self):
@@ -43,10 +42,10 @@ class NeoStore:
         # Connect to Graph
         graph = Graph(**neo4j_config)
         # Check that we are connected to the expected Neo4J Store - to avoid accidents...
-        dbname = DBMS().database_name
+        dbname = graph.database.name
         if dbname != self.config['Graph']['neo_db']:
             logging.fatal("Connected to Neo4J database {d}, but expected to be connected to {n}"
-                          .format(d=dbname, n=self.config['Main']['neo_db']))
+                          .format(d=dbname, n=self.config['Graph']['neo_db']))
             sys.exit(1)
         return graph
 
@@ -102,7 +101,7 @@ class NeoStore:
 
         :return: list of nodes that fulfill the criteria, or False if no nodes are found.
         """
-        nodes = self.selector.select(*labels, **props)
+        nodes = self.matcher.match(*labels, **props)
         nodelist = list(nodes)
         if len(nodelist) == 0:
             # No nodes found that fulfil the criteria
